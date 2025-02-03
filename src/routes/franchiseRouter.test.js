@@ -3,7 +3,6 @@ const app = require('../service');
 const { Role, DB } = require('../database/database.js');
 
 if (process.env.VSCODE_INSPECTOR_OPTIONS) {
-  // Increase Jest timeout to 5 minutes if debugging in VSCode
   jest.setTimeout(60 * 1000 * 5);
 }
 
@@ -27,7 +26,6 @@ async function getAdminAuth() {
   return [loginRes.body.token, adminUser.email];
 }
 
-// Test: getFranchises
 test('getFranchises', async () => {
   const getFranchisesRes = await request(app).get('/api/franchise');
   let franchiseQuantity = getFranchisesRes.body.length;
@@ -41,7 +39,7 @@ test('getFranchises', async () => {
   expect(newFranchiseQuantity).toBe(franchiseQuantity + 1);
 });
 
-// Test: createFranchise
+
 test('createFranchise', createFranchise);
 
 async function createFranchise() {
@@ -67,7 +65,6 @@ async function createFranchise() {
   return [email, token, createFranchiseRes.body.id];
 }
 
-// Test: deleteFranchise
 test('deleteFranchise', async () => {
   let franchiseOwnerInfo = await createFranchise();
   let token = franchiseOwnerInfo[1];
@@ -81,7 +78,6 @@ test('deleteFranchise', async () => {
   expect(deleteFranchiseRes.body).toMatchObject({ message: 'franchise deleted' });
 });
 
-// Test: createStore
 test('createStore', async () => {
   let franchiseOwnerInfo = await createFranchise();
   let email = franchiseOwnerInfo[0];

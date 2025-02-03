@@ -1,6 +1,3 @@
-/**
- * authRouter.test.js
- */
 const request = require('supertest');
 const app = require('../service'); // your Express app that uses authRouter
 

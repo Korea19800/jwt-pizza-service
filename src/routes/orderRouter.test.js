@@ -2,9 +2,8 @@ const request = require('supertest');
 const app = require('../service');
 const { Role, DB } = require('../database/database.js');
 
-// helper functions and constants
 if (process.env.VSCODE_INSPECTOR_OPTIONS) {
-  jest.setTimeout(60 * 1000 * 5); // 5 minutes
+  jest.setTimeout(60 * 1000 * 5); 
 }
 
 function randomName() {
@@ -14,10 +13,8 @@ function randomName() {
 let menuItem = {id: 1, title: 'Veggie', image: 'pizza1.png', 
     price: 0.0038, description: 'A garden of delight'}
 
-
-// create rando user
+// make random user
 const testUser = { name: 'pizza diner', email: 'reg@test.com', password: 'a' };
-
 
 async function createUser() {
     testUser.email = Math.random().toString(36).substring(2, 12) + '@test.com';
@@ -30,6 +27,7 @@ async function createUser() {
 function expectValidJwt(potentialJwt) {
 expect(potentialJwt).toMatch(/^[a-zA-Z0-9\-_]*\.[a-zA-Z0-9\-_]*\.[a-zA-Z0-9\-_]*$/);
 }
+
 // Create admin user
 async function createAdminUser() {
   let user = { password: 'toomanysecrets', roles: [{ role: Role.Admin }] };
@@ -46,9 +44,7 @@ async function getAdminAuth() {
     return loginRes.body.token;
 }
 
-
-
-  test('getMenu', async () => {
+test('getMenu', async () => {
     let newMenuItem = menuItem;
     newMenuItem.title = randomName();
     delete newMenuItem.id;
@@ -79,7 +75,6 @@ async function addMenuItem(newMenuItem) {
 };
 
 test('addMenuItem', addMenuItemTest);
-
 
 async function orderItem() {
     let auth = await createUser();
