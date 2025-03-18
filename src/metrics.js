@@ -119,60 +119,91 @@ function trackPurchase(orderData, factoryResponseTime, isSuccessful) {
   }
 }
 
-// This will periodically send metrics to Grafana
-const timer = setInterval(() => {
+// MetricBuilder class for organizing metrics
+class MetricBuilder {
+  constructor() {
+    this.metricsData = [];
+  }
+
+  addMetric(name, value, attributes) {
+    this.metricsData.push({
+      name,
+      value,
+      attributes: { ...attributes, source: config.metrics.source }
+    });
+    return this;
+  }
+
+  getMetrics() {
+    return this.metricsData;
+  }
+}
+
+// Functions to collect different types of metrics
+function httpMetrics(builder) {
   // Total request count
-  sendMetricToGrafana('total_requests', metrics.requests['total'] || 0, { endpoint: 'all' });
+  builder.addMetric('total_requests', metrics.requests['total'] || 0, { endpoint: 'all' });
 
   // Per-endpoint request count
   Object.keys(metrics.requests).forEach((endpoint) => {
-    sendMetricToGrafana('requests', metrics.requests[endpoint], { endpoint });
+    builder.addMetric('requests', metrics.requests[endpoint], { endpoint });
   });
 
   // HTTP Methods
   Object.keys(metrics.methodCounts).forEach((method) => {
-    sendMetricToGrafana('http_methods', metrics.methodCounts[method], { method });
+    builder.addMetric('http_methods', metrics.methodCounts[method], { method });
   });
 
   // Status Codes
   Object.keys(metrics.statusCodes).forEach((statusCode) => {
-    sendMetricToGrafana('status_codes', metrics.statusCodes[statusCode], { status: statusCode });
+    builder.addMetric('status_codes', metrics.statusCodes[statusCode], { status: statusCode });
   });
 
   // Average Response Times
   Object.keys(metrics.responseTimes).forEach((endpoint) => {
     const { count, total } = metrics.responseTimes[endpoint];
-    const avgResponseTime = total / count;
-    sendMetricToGrafana('response_time_ms', avgResponseTime, { endpoint });
+    if (count > 0) {
+      const avgResponseTime = total / count;
+      builder.addMetric('response_time_ms', avgResponseTime, { endpoint });
+    }
   });
-  
+}
+
+function systemMetrics(builder) {
+  // System metrics
+  builder.addMetric('system_cpu_usage', getCpuUsagePercentage(), { type: 'cpu' });
+  builder.addMetric('system_memory_usage', getMemoryUsagePercentage(), { type: 'memory' });
+}
+
+function userMetrics(builder) {
+  // User activity metrics
+  builder.addMetric('user_active_count', metrics.userActivity.activeUsers.size, { type: 'active_users' });
+  builder.addMetric('user_registrations', metrics.userActivity.registrations, { type: 'registrations' });
+  builder.addMetric('user_logins', metrics.userActivity.logins, { type: 'logins' });
+  builder.addMetric('user_logouts', metrics.userActivity.logouts, { type: 'logouts' });
+}
+
+function purchaseMetrics(builder) {
   // Purchase metrics
-  sendMetricToGrafana('purchase_count_total', metrics.purchases.total, { type: 'all' });
-  sendMetricToGrafana('purchase_count_successful', metrics.purchases.successful, { type: 'successful' });
-  sendMetricToGrafana('purchase_count_failed', metrics.purchases.failed, { type: 'failed' });
-  sendMetricToGrafana('purchase_total_pizzas', metrics.purchases.totalPizzas, { type: 'count' });
-  sendMetricToGrafana('purchase_total_cost', metrics.purchases.totalCost, { type: 'cost' });
+  builder.addMetric('purchase_count_total', metrics.purchases.total, { type: 'all' });
+  builder.addMetric('purchase_count_successful', metrics.purchases.successful, { type: 'successful' });
+  builder.addMetric('purchase_count_failed', metrics.purchases.failed, { type: 'failed' });
+  builder.addMetric('purchase_total_pizzas', metrics.purchases.totalPizzas, { type: 'count' });
+  builder.addMetric('purchase_total_cost', metrics.purchases.totalCost, { type: 'cost' });
   
   // Calculate average factory response time
   if (metrics.purchases.factoryResponseTimes.length > 0) {
     const avgFactoryResponseTime = metrics.purchases.factoryResponseTimes.reduce((a, b) => a + b, 0) / metrics.purchases.factoryResponseTimes.length;
-    sendMetricToGrafana('purchase_factory_response_time_ms', avgFactoryResponseTime, { type: 'response_time' });
+    builder.addMetric('purchase_factory_response_time_ms', avgFactoryResponseTime, { type: 'response_time' });
   }
-  
-  // User activity metrics
-  sendMetricToGrafana('user_active_count', metrics.userActivity.activeUsers.size, { type: 'active_users' });
-  sendMetricToGrafana('user_registrations', metrics.userActivity.registrations, { type: 'registrations' });
-  sendMetricToGrafana('user_logins', metrics.userActivity.logins, { type: 'logins' });
-  sendMetricToGrafana('user_logouts', metrics.userActivity.logouts, { type: 'logouts' });
-  
-  // System metrics
-  sendMetricToGrafana('system_cpu_usage', getCpuUsagePercentage(), { type: 'cpu' });
-  sendMetricToGrafana('system_memory_usage', getMemoryUsagePercentage(), { type: 'memory' });
-}, 10000);
+}
 
-function sendMetricToGrafana(metricName, metricValue, attributes) {
-  attributes = { ...attributes, source: config.metrics.source };
+function authMetrics(builder) {
+  // Authentication metrics are already covered in userMetrics
+  // We could add more specific auth metrics here if needed
+}
 
+function sendMetricToGrafana(metricData) {
   const metric = {
     resourceMetrics: [
       {
@@ -180,12 +211,12 @@ function sendMetricToGrafana(metricName, metricValue, attributes) {
           {
             metrics: [
               {
-                name: metricName,
+                name: metricData.name,
                 unit: '1',
                 sum: {
                   dataPoints: [
                     {
-                      asInt: metricValue,
+                      asInt: metricData.value,
                       timeUnixNano: Date.now() * 1000000, // 나노초 단위
                       attributes: [],
                     },
@@ -201,16 +232,16 @@ function sendMetricToGrafana(metricName, metricValue, attributes) {
     ],
   };
 
-  Object.keys(attributes).forEach((key) => {
+  Object.keys(metricData.attributes).forEach((key) => {
     metric.resourceMetrics[0].scopeMetrics[0].metrics[0].sum.dataPoints[0].attributes.push({
       key: key,
-      value: { stringValue: attributes[key] },
+      value: { stringValue: metricData.attributes[key] },
     });
   });
 
-  console.log(`Sending metric: ${metricName}, Value: ${metricValue}`);
+  console.log(`Sending metric: ${metricData.name}, Value: ${metricData.value}`);
 
-  fetch(`${config.metrics.url}`, {
+  return fetch(`${config.metrics.url}`, {
     method: 'POST',
     body: JSON.stringify(metric),
     headers: {
@@ -222,13 +253,41 @@ function sendMetricToGrafana(metricName, metricValue, attributes) {
       if (!response.ok) {
         console.error('Failed to push metrics data to Grafana', response);
       } else {
-        console.log(`Pushed ${metricName} successfully.`);
+        console.log(`Pushed ${metricData.name} successfully.`);
       }
     })
     .catch((error) => {
       console.error('Error pushing metrics:', error);
     });
 }
+
+// Send metrics periodically
+function sendMetricsPeriodically(period = 10000) {
+  const timer = setInterval(() => {
+    try {
+      const builder = new MetricBuilder();
+      httpMetrics(builder);
+      systemMetrics(builder);
+      userMetrics(builder);
+      purchaseMetrics(builder);
+      authMetrics(builder);
+
+      const metricsToSend = builder.getMetrics();
+      
+      // Send all metrics in parallel
+      Promise.all(metricsToSend.map(metric => sendMetricToGrafana(metric)))
+        .catch(error => console.error('Error sending metrics batch:', error));
+        
+    } catch (error) {
+      console.log('Error collecting metrics', error);
+    }
+  }, period);
+  
+  return timer;
+}
+
+// Start the metrics collection
+const metricsTimer = sendMetricsPeriodically(10000);
 
 module.exports = { track, requestTracker, trackPurchase };
 
