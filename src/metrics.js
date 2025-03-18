@@ -5,7 +5,7 @@ const os = require('os');
 // 2. OS code from deliv8
 function getCpuUsagePercentage() {
   const cpuUsage = os.loadavg()[0] / os.cpus().length;
-  return cpuUsage.toFixed(2) * 100;
+  return parseFloat(cpuUsage.toFixed(2)) * 100;
 }
 
 function getMemoryUsagePercentage() {
@@ -13,7 +13,7 @@ function getMemoryUsagePercentage() {
   const freeMemory = os.freemem();
   const usedMemory = totalMemory - freeMemory;
   const memoryUsage = (usedMemory / totalMemory) * 100;
-  return memoryUsage.toFixed(2);
+  return parseFloat(memoryUsage.toFixed(2));
 }
 
 const metrics = {
@@ -187,9 +187,15 @@ function httpMetrics(builder) {
 }
 
 function systemMetrics(builder) {
-  // System metrics
-  builder.addMetric('system_cpu_usage', getCpuUsagePercentage(), { type: 'cpu' });
-  builder.addMetric('system_memory_usage', getMemoryUsagePercentage(), { type: 'memory' });
+  // Get CPU and memory usage
+  const cpuUsage = getCpuUsagePercentage();
+  const memoryUsage = getMemoryUsagePercentage();
+  
+  console.log(`Reporting system metrics - CPU: ${cpuUsage}%, Memory: ${memoryUsage}%`);
+  
+  // System metrics - ensure consistent naming and attributes
+  builder.addMetric('system_cpu_usage_total', cpuUsage, { type: 'system' });
+  builder.addMetric('system_memory_usage_total', memoryUsage, { type: 'system' });
 }
 
 function userMetrics(builder) {
