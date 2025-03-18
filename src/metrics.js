@@ -21,6 +21,7 @@ const metrics = {
   responseTimes: {},
   statusCodes: {},
   methodCounts: {},
+  totalRequests: 0, // Add a dedicated counter for total requests
   // 3. Purchase metrics
   purchases: {
     total: 0,
@@ -68,6 +69,9 @@ function track(endpoint) {
 
 function requestTracker(req, res, next) {
   const start = Date.now();
+  
+  // Increment total request counter
+  metrics.totalRequests++;
   
   // Track HTTP method
   const method = req.method;
@@ -141,18 +145,31 @@ class MetricBuilder {
 
 // Functions to collect different types of metrics
 function httpMetrics(builder) {
-  // Total request count
-  builder.addMetric('total_requests', metrics.requests['total'] || 0, { endpoint: 'all' });
+  // Total HTTP requests (from the dedicated counter)
+  builder.addMetric('total_http_requests', metrics.totalRequests, { type: 'all' });
+  
+  // Total request count (from the endpoint tracking)
+  builder.addMetric('total_endpoint_requests', metrics.requests['total'] || 0, { endpoint: 'all' });
 
   // Per-endpoint request count
   Object.keys(metrics.requests).forEach((endpoint) => {
-    builder.addMetric('requests', metrics.requests[endpoint], { endpoint });
+    if (endpoint !== 'total') { // Skip the 'total' key as we already reported it
+      builder.addMetric('requests', metrics.requests[endpoint], { endpoint });
+    }
   });
 
+  // Total requests by HTTP method
+  let totalByMethods = 0;
+  
   // HTTP Methods
   Object.keys(metrics.methodCounts).forEach((method) => {
-    builder.addMetric('http_methods', metrics.methodCounts[method], { method });
+    const count = metrics.methodCounts[method];
+    totalByMethods += count;
+    builder.addMetric('http_methods', count, { method });
   });
+  
+  // Add a combined total of all HTTP methods
+  builder.addMetric('total_by_methods', totalByMethods, { type: 'all_methods' });
 
   // Status Codes
   Object.keys(metrics.statusCodes).forEach((statusCode) => {
