@@ -37,6 +37,15 @@ const metrics = {
     registrations: 0,
     logins: 0,
     logouts: 0
+  },
+  // Authentication metrics
+  authentication: {
+    attempts: 0,
+    successful: 0,
+    failed: 0,
+    registrationAttempts: 0,
+    successfulRegistrations: 0,
+    failedRegistrations: 0
   }
 };
 
@@ -49,9 +58,14 @@ function track(endpoint) {
     if (endpoint === '/api/auth' && req.method === 'POST') {
       // New user registration
       metrics.userActivity.registrations++;
+      // Registration attempt
+      metrics.authentication.registrationAttempts++;
     } else if (endpoint === '/api/auth' && req.method === 'PUT') {
       // User login
       metrics.userActivity.logins++;
+      // Login attempt
+      metrics.authentication.attempts++;
+      
       if (req.body && req.body.email) {
         metrics.userActivity.activeUsers.add(req.body.email);
       }
@@ -91,9 +105,45 @@ function requestTracker(req, res, next) {
     const statusCode = res.statusCode;
     const statusCodeKey = Math.floor(statusCode / 100) + 'xx';
     metrics.statusCodes[statusCodeKey] = (metrics.statusCodes[statusCodeKey] || 0) + 1;
+    
+    // Track authentication success/failure based on status code and endpoint
+    if (endpoint === '/api/auth') {
+      if (req.method === 'PUT') { // Login endpoint
+        if (statusCode >= 200 && statusCode < 300) {
+          metrics.authentication.successful++;
+        } else if (statusCode >= 400) {
+          metrics.authentication.failed++;
+        }
+      } else if (req.method === 'POST') { // Registration endpoint
+        if (statusCode >= 200 && statusCode < 300) {
+          metrics.authentication.successfulRegistrations++;
+        } else if (statusCode >= 400) {
+          metrics.authentication.failedRegistrations++;
+        }
+      }
+    }
   });
 
   next();
+}
+
+// Function to manually track authentication results
+function trackAuthentication(isSuccessful, isRegistration = false) {
+  if (isRegistration) {
+    metrics.authentication.registrationAttempts++;
+    if (isSuccessful) {
+      metrics.authentication.successfulRegistrations++;
+    } else {
+      metrics.authentication.failedRegistrations++;
+    }
+  } else {
+    metrics.authentication.attempts++;
+    if (isSuccessful) {
+      metrics.authentication.successful++;
+    } else {
+      metrics.authentication.failed++;
+    }
+  }
 }
 
 // Function to track purchase metrics
@@ -204,6 +254,14 @@ function userMetrics(builder) {
   builder.addMetric('user_registrations', metrics.userActivity.registrations, { type: 'registrations' });
   builder.addMetric('user_logins', metrics.userActivity.logins, { type: 'logins' });
   builder.addMetric('user_logouts', metrics.userActivity.logouts, { type: 'logouts' });
+  
+  // Authentication metrics
+  builder.addMetric('auth_attempts_total', metrics.authentication.attempts, { type: 'authentication' });
+  builder.addMetric('auth_successful', metrics.authentication.successful, { type: 'authentication' });
+  builder.addMetric('auth_failed', metrics.authentication.failed, { type: 'authentication' });
+  builder.addMetric('auth_registration_attempts', metrics.authentication.registrationAttempts, { type: 'authentication' });
+  builder.addMetric('auth_registration_successful', metrics.authentication.successfulRegistrations, { type: 'authentication' });
+  builder.addMetric('auth_registration_failed', metrics.authentication.failedRegistrations, { type: 'authentication' });
 }
 
 function purchaseMetrics(builder) {
@@ -221,9 +279,12 @@ function purchaseMetrics(builder) {
   }
 }
 
-function authMetrics() {
-  // Authentication metrics are already covered in userMetrics
-  // We could add more specific auth metrics here if needed
+function authMetrics(builder) {
+  // Add specific auth metrics here if they're not covered in userMetrics
+  // For now, we've integrated them into userMetrics
+  if (builder) {
+    // Just in case we want to add more auth-specific metrics in the future
+  }
 }
 
 function sendMetricToGrafana(metricData) {
@@ -284,6 +345,28 @@ function sendMetricToGrafana(metricData) {
     });
 }
 
+// Function to get authentication metrics
+function getAuthenticationMetrics() {
+  return {
+    login: {
+      attempts: metrics.authentication.attempts,
+      successful: metrics.authentication.successful,
+      failed: metrics.authentication.failed,
+      successRate: metrics.authentication.attempts > 0 
+        ? (metrics.authentication.successful / metrics.authentication.attempts * 100).toFixed(2) 
+        : 0
+    },
+    registration: {
+      attempts: metrics.authentication.registrationAttempts,
+      successful: metrics.authentication.successfulRegistrations,
+      failed: metrics.authentication.failedRegistrations,
+      successRate: metrics.authentication.registrationAttempts > 0
+        ? (metrics.authentication.successfulRegistrations / metrics.authentication.registrationAttempts * 100).toFixed(2)
+        : 0
+    }
+  };
+}
+
 // 4. Periodic Reporting Send metrics periodically
 function sendMetricsPeriodically(period = 10000) {
   return setInterval(() => {
@@ -293,7 +376,7 @@ function sendMetricsPeriodically(period = 10000) {
       systemMetrics(builder);
       userMetrics(builder);
       purchaseMetrics(builder);
-      authMetrics();
+      authMetrics(builder);
 
       const metricsToSend = builder.getMetrics();
       
@@ -310,4 +393,10 @@ function sendMetricsPeriodically(period = 10000) {
 // Initialize metrics collection
 sendMetricsPeriodically(10000);
 
-module.exports = { track, requestTracker, trackPurchase };
+module.exports = { 
+  track, 
+  requestTracker, 
+  trackPurchase, 
+  trackAuthentication,
+  getAuthenticationMetrics
+};
