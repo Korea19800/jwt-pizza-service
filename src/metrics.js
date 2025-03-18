@@ -198,7 +198,7 @@ function purchaseMetrics(builder) {
   }
 }
 
-function authMetrics(builder) {
+function authMetrics() {
   // Authentication metrics are already covered in userMetrics
   // We could add more specific auth metrics here if needed
 }
@@ -263,14 +263,14 @@ function sendMetricToGrafana(metricData) {
 
 // Send metrics periodically
 function sendMetricsPeriodically(period = 10000) {
-  const timer = setInterval(() => {
+  return setInterval(() => {
     try {
       const builder = new MetricBuilder();
       httpMetrics(builder);
       systemMetrics(builder);
       userMetrics(builder);
       purchaseMetrics(builder);
-      authMetrics(builder);
+      authMetrics();
 
       const metricsToSend = builder.getMetrics();
       
@@ -282,93 +282,9 @@ function sendMetricsPeriodically(period = 10000) {
       console.log('Error collecting metrics', error);
     }
   }, period);
-  
-  return timer;
 }
 
-// Start the metrics collection
-const metricsTimer = sendMetricsPeriodically(10000);
+// Initialize metrics collection
+sendMetricsPeriodically(10000);
 
 module.exports = { track, requestTracker, trackPurchase };
-
-
-/* prev example code
-const config = require('./config');
-
-const requests = {};
-
-function track(endpoint) {
-  return (req, res, next) => {
-    requests[endpoint] = (requests[endpoint] || 0) + 1;
-    next();
-  };
-}
-
-// This will periodically send metrics to Grafana
-const timer = setInterval(() => {
-  Object.keys(requests).forEach((endpoint) => {
-    sendMetricToGrafana('requests', requests[endpoint], { endpoint });
-  });
-}, 10000);
-
-function sendMetricToGrafana(metricName, metricValue, attributes) {
-  attributes = { ...attributes, source: config.source };
-
-  const metric = {
-    resourceMetrics: [
-      {
-        scopeMetrics: [
-          {
-            metrics: [
-              {
-                name: metricName,
-                unit: '1',
-                sum: {
-                  dataPoints: [
-                    {
-                      asInt: metricValue,
-                      timeUnixNano: Date.now() * 1000000,
-                      attributes: [],
-                    },
-                  ],
-                  aggregationTemporality: 'AGGREGATION_TEMPORALITY_CUMULATIVE',
-                  isMonotonic: true,
-                },
-              },
-            ],
-          },
-        ],
-      },
-    ],
-  };
-
-  Object.keys(attributes).forEach((key) => {
-    metric.resourceMetrics[0].scopeMetrics[0].metrics[0].sum.dataPoints[0].attributes.push({
-      key: key,
-      value: { stringValue: attributes[key] },
-    });
-  });
-  
-  console.log(config.apiKey);
-  console.log(metric);
-
-  fetch(`${config.url}`, {
-    method: 'POST',
-    body: JSON.stringify(metric),
-    headers: { Authorization: `Bearer ${config.apiKey}`, 'Content-Type': 'application/json' },
-  })
-    .then((response) => {
-      if (!response.ok) {
-        console.error('Failed to push metrics data to Grafana');
-        console.log(response)
-      } else {
-        console.log(`Pushed ${metricName}`);
-      }
-    })
-    .catch((error) => {
-      console.error('Error pushing metrics:', error);
-    });
-}
-
-module.exports = { track };
-*/
