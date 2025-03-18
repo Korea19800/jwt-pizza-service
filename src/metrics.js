@@ -2,7 +2,7 @@
 const config = require('./config');
 const os = require('os');
 
-// given os code from deliv8
+// 2. OS code from deliv8
 function getCpuUsagePercentage() {
   const cpuUsage = os.loadavg()[0] / os.cpus().length;
   return cpuUsage.toFixed(2) * 100;
@@ -21,7 +21,7 @@ const metrics = {
   responseTimes: {},
   statusCodes: {},
   methodCounts: {},
-  // Purchase metrics
+  // 3. Purchase metrics
   purchases: {
     total: 0,
     successful: 0,
@@ -261,7 +261,7 @@ function sendMetricToGrafana(metricData) {
     });
 }
 
-// Send metrics periodically
+// 4. Periodic Reporting Send metrics periodically
 function sendMetricsPeriodically(period = 10000) {
   return setInterval(() => {
     try {
