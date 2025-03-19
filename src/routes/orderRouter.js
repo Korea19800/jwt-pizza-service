@@ -96,7 +96,7 @@ orderRouter.post(
     });
     
     // Calculate factory response time
-    const factoryResponseTime = Date.now() - factoryStartTime;
+    // const factoryResponseTime = Date.now() - factoryStartTime;
     
     const j = await r.json();
     const isSuccessful = r.ok;
