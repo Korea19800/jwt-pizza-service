@@ -19,6 +19,9 @@ let unsuccessfulAuthAttempts = 0;
 let cpuUsage = 0;
 let memoryPercentage = 0;
 
+// Debug mode to show more information in logs
+const DEBUG = true;
+
 setInterval(() => {
   try {
     const buf = new MetricBuilder();
@@ -36,14 +39,46 @@ setInterval(() => {
 }, 5000);
 
 function sendMetricsToGrafana(metrics) {
-  const body = JSON.stringify(metrics); // Convert the unified metrics object to JSON string
-  console.log(body);
+  // Add resource attribute for proper identification in Grafana Cloud
+  if (!metrics.resourceMetrics || metrics.resourceMetrics.length === 0) {
+    console.error("No metrics to send");
+    return;
+  }
 
-  fetch(`${config.url}`, {
+  // Add resource attributes to each metric
+  metrics.resourceMetrics.forEach(metric => {
+    metric.resource = {
+      attributes: [
+        {
+          key: "service.name",
+          value: { stringValue: config.metrics?.source || "jwt-pizza-service" }
+        }
+      ]
+    };
+  });
+
+  const body = JSON.stringify(metrics);
+  
+  if (DEBUG) {
+    console.log("Metrics being sent:", JSON.stringify(metrics, null, 2));
+    console.log("Target URL:", config.metrics?.url);
+    console.log("Using API key starting with:", config.metrics?.apiKey?.substring(0, 10) + "...");
+  } else {
+    console.log("Sending metrics to Grafana...");
+  }
+
+  // Use the correct URL and API key from config
+  if (!config.metrics?.url || !config.metrics?.apiKey) {
+    console.error("Missing metrics URL or API key in config. Check your config.js file.");
+    console.error("Config available:", JSON.stringify(config, null, 2));
+    return;
+  }
+
+  fetch(config.metrics.url, {
     method: "POST",
     body: body,
     headers: {
-      Authorization: `Bearer ${config.apiKey}`,
+      "Authorization": `Bearer ${config.metrics.apiKey}`,
       "Content-Type": "application/json",
     },
   })
@@ -51,11 +86,13 @@ function sendMetricsToGrafana(metrics) {
       if (!response.ok) {
         response.text().then((text) => {
           console.error(
-            `Failed to push metrics data to Grafana: ${text}\n${body}`
+            `Failed to push metrics data to Grafana: Status ${response.status}
+            Error: ${text}
+            Request body: ${body.substring(0, 200)}...`
           );
         });
       } else {
-        console.log(`Pushed metrics to Grafana.`);
+        console.log(`Successfully pushed metrics to Grafana. Status: ${response.status}`);
       }
     })
     .catch((error) => {
@@ -69,15 +106,16 @@ function metricTracker(req, res, next) {
   trackAuthMetrics(req, res);
 
   res.on("finish", () => {
-    console.log("Done");
+    console.log("Request completed:", req.method, req.url, res.statusCode);
   });
   next();
 }
 
 function trackHttpMetrics(req) {
   httpStats.totalRequests++;
-  httpStats.methodCounts[req.method] =
-    (httpStats.methodCounts[req.method] || 0) + 1;
+  if (req.method in httpStats.methodCounts) {
+    httpStats.methodCounts[req.method]++;
+  }
 }
 
 function httpMetrics(buf) {
@@ -116,7 +154,6 @@ function incrementAuthAttemptRates(res) {
       console.log("unsuccesful login/logout attempt", res.statusCode);
     }
   });
-  // Successful login attempt (e.g., PUT /api/auth with valid credentials)
 }
 
 function authAttempMetrics(buf) {
@@ -146,11 +183,12 @@ function getMemoryUsagePercentage() {
 
 function addCPUMetric(buf) {
   cpuUsage = getCpuUsagePercentage();
-  buf.addMetric("cpu-usage", cpuUsage, "gauge", "1");
+  buf.addMetric("cpu_usage", cpuUsage, "gauge", "1"); // Changed from hyphen to underscore for Prometheus compatibility
 }
+
 function addMemoyMetric(buf) {
   memoryPercentage = getMemoryUsagePercentage();
-  buf.addMetric("memory-usage", memoryPercentage, "gauge", "1");
+  buf.addMetric("memory_usage", memoryPercentage, "gauge", "1"); // Changed from hyphen to underscore for Prometheus compatibility
 }
 
 function systemMetrics(buf) {

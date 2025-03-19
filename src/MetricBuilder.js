@@ -3,10 +3,23 @@ class MetricBuilder {
       this.resourceMetrics = [];
     }
   
-    addMetric(metricName, metricValue, type, unit) {
+    addMetric(metricName, metricValue, type, unit, attributes = {}) {
+      // Format attributes for OTLP protocol
+      const formattedAttributes = Object.entries(attributes).map(([key, value]) => ({
+        key,
+        value: { stringValue: String(value) }
+      }));
+  
+      // Add timestamp in nanoseconds
+      const timeUnixNano = BigInt(Date.now()) * BigInt(1000000); // Convert to nanoseconds
+  
+      // Create metric with proper OTLP format
       const metric = {
         scopeMetrics: [
           {
+            scope: {
+              name: "jwt-pizza-service",
+            },
             metrics: [
               {
                 name: metricName,
@@ -14,8 +27,10 @@ class MetricBuilder {
                 [type]: {
                   dataPoints: [
                     {
-                      asInt: metricValue,
-                      timeUnixNano: Date.now() * 1000000, // Convert milliseconds to nanoseconds
+                      // Use asInt or asDouble based on value type
+                      [Number.isInteger(metricValue) ? "asInt" : "asDouble"]: metricValue,
+                      timeUnixNano: String(timeUnixNano), // OTLP expects time as string
+                      attributes: formattedAttributes
                     },
                   ],
                 },
@@ -32,10 +47,15 @@ class MetricBuilder {
       }
   
       this.resourceMetrics.push(metric);
+      return this;
     }
   
     toJSON() {
-      return { resourceMetrics: this.resourceMetrics };
+      // Format for OTLP protocol with schema version
+      return { 
+        resourceMetrics: this.resourceMetrics,
+        schemaUrl: "https://opentelemetry.io/schemas/1.0.0"
+      };
     }
   }
   
