@@ -86,7 +86,7 @@ orderRouter.post(
     const order = await DB.addDinerOrder(req.user, orderReq);
     
     // Record start time for factory response time tracking
-    const factoryStartTime = Date.now();
+    // const factoryStartTime = Date.now();
     
     // Send request to the factory
     const r = await fetch(`${config.factory.url}/api/order`, {
