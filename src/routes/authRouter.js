@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const config = require('../config.js');
 const { asyncHandler } = require('../endpointHelper.js');
 const { DB, Role } = require('../database/database.js');
-const { track } = require('../metrics.js');
+// const { track } = require('../metrics.js');
 
 const authRouter = express.Router();
 
@@ -67,7 +67,7 @@ authRouter.authenticateToken = (req, res, next) => {
 // register
 authRouter.post(
   '/',
-  track('/api/auth'),
+  // track('/api/auth'),
   asyncHandler(async (req, res) => {
     const { name, email, password } = req.body;
     if (!name || !email || !password) {
@@ -82,7 +82,7 @@ authRouter.post(
 // login
 authRouter.put(
   '/',
-  track('/api/auth'),
+  // track('/api/auth'),
   asyncHandler(async (req, res) => {
     const { email, password } = req.body;
     const user = await DB.getUser(email, password);
@@ -94,7 +94,7 @@ authRouter.put(
 // logout
 authRouter.delete(
   '/',
-  track('/api/auth'),
+  // track('/api/auth'),
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     await clearAuth(req);
@@ -105,7 +105,7 @@ authRouter.delete(
 // updateUser
 authRouter.put(
   '/:userId',
-  track('/api/auth/:userId'),
+  // track('/api/auth/:userId'),
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     const { email, password } = req.body;

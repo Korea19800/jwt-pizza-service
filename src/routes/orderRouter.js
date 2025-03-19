@@ -3,7 +3,7 @@ const config = require('../config.js');
 const { Role, DB } = require('../database/database.js');
 const { authRouter } = require('./authRouter.js');
 const { asyncHandler, StatusCodeError } = require('../endpointHelper.js');
-const { trackPurchase, track } = require('../metrics.js');
+// const { trackPurchase, track } = require('../metrics.js');
 
 const orderRouter = express.Router();
 
@@ -44,7 +44,7 @@ orderRouter.endpoints = [
 // getMenu
 orderRouter.get(
   '/menu',
-  track('/api/order/menu'),
+  // track('/api/order/menu'),
   asyncHandler(async (req, res) => {
     res.send(await DB.getMenu());
   })
@@ -53,7 +53,7 @@ orderRouter.get(
 // addMenuItem
 orderRouter.put(
   '/menu',
-  track('/api/order/menu'),
+  // track('/api/order/menu'),
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     if (!req.user.isRole(Role.Admin)) {
@@ -69,7 +69,7 @@ orderRouter.put(
 // getOrders
 orderRouter.get(
   '/',
-  track('/api/order'),
+  // track('/api/order'),
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     res.json(await DB.getOrders(req.user, req.query.page));
@@ -79,7 +79,7 @@ orderRouter.get(
 // createOrder
 orderRouter.post(
   '/',
-  track('/api/order'),
+  // track('/api/order'),
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
     const orderReq = req.body;
@@ -102,7 +102,7 @@ orderRouter.post(
     const isSuccessful = r.ok;
     
     // Track purchase metrics
-    trackPurchase(order, factoryResponseTime, isSuccessful);
+    // trackPurchase(order, factoryResponseTime, isSuccessful);
     
     if (isSuccessful) {
       res.send({ order, reportSlowPizzaToFactoryUrl: j.reportUrl, jwt: j.jwt });
