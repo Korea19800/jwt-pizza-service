@@ -6,6 +6,7 @@ const { Role } = require('../model/model.js');
 const dbModel = require('./dbModel.js');
 const logger = require('../logging/logger.js');
 
+/* eslint-disable no-unused-vars */
 class DB {
   constructor() {
     this.pool = null;
