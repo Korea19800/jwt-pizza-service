@@ -99,7 +99,7 @@ jobs:
         with:
           name: package
           path: dist/
-
+      
   deploy:
     runs-on: ubuntu-latest
     permissions:
@@ -142,3 +142,9 @@ jobs:
       - name: Deploy new container
         run: |
           aws ecs update-service --cluster jwt-pizza-service --service jwt-pizza-service --force-new-deployment
+
+      - name: Annotate deployment in Grafana
+        run: |
+          curl -s -X POST https://korea19800.grafana.net/api/annotations -H "Authorization: Bearer ${{ secrets.GRAFANA_ACCESS_TOKEN }}" -H "Content-Type:application/json" -d '{"dashboardUID":"fefxtqwexm2o0a", "panelId":9, "tags":["backend","production"], "text":"Version '"$version"' deployed" }'
+
+      
