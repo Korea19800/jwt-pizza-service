@@ -1,5 +1,5 @@
-import globals from 'globals';
-import pluginJs from '@eslint/js';
+//import globals from 'globals';
+//import pluginJs from '@eslint/js';
 
 
 //export default [
@@ -8,21 +8,3 @@ import pluginJs from '@eslint/js';
   //{ languageOptions: { globals: globals.jest } },
   //pluginJs.configs.recommended,
 // ];
-
-// updated eslint.config.mjs for deliv11
-export default [
-  {
-    files: ["**/*.js"],
-    languageOptions: {
-      sourceType: "module",
-      ecmaVersion: 2020,
-    },
-    env: {
-      node: true,
-      es2021: true,
-    },
-    rules: {
-      // 여기에 룰들 추가
-    },
-  },
-];
