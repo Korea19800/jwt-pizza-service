@@ -240,7 +240,7 @@ function systemMetrics(builder) {
   const cpuUsage = getCpuUsagePercentage();
   const memoryUsage = getMemoryUsagePercentage();
   
-  console.log(`Reporting system metrics - CPU: ${cpuUsage}%, Memory: ${memoryUsage}%`);
+  // console.log(`Reporting system metrics - CPU: ${cpuUsage}%, Memory: ${memoryUsage}%`);
   
   // System metrics - ensure consistent naming and attributes
   builder.addMetric('system_cpu_usage_total', cpuUsage, { type: 'system' });
@@ -322,7 +322,7 @@ function sendMetricToGrafana(metricData) {
     });
   });
 
-  console.log(`Sending metric: ${metricData.name}, Value: ${metricData.value}`);
+  // console.log(`Sending metric: ${metricData.name}, Value: ${metricData.value}`);
 
   return fetch(`${config.metrics.url}`, {
     method: 'POST',
@@ -336,7 +336,7 @@ function sendMetricToGrafana(metricData) {
       if (!response.ok) {
         console.error('Failed to push metrics data to Grafana', response);
       } else {
-        console.log(`Pushed ${metricData.name} successfully.`);
+        //console.log(`Pushed ${metricData.name} successfully.`);
       }
     })
     .catch((error) => {
@@ -367,7 +367,7 @@ function getAuthenticationMetrics() {
 }
 
 // 4. Periodic Reporting Send metrics periodically
-function sendMetricsPeriodically(period = 10000) {
+function sendMetricsPeriodically(period = 20000) {
   return setInterval(() => {
     try {
       const builder = new MetricBuilder();
