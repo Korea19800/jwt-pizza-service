@@ -7,6 +7,7 @@ const dbModel = require('./dbModel.js');
 const logger = require('../logging/logger.js');
 
 /* eslint-disable no-unused-vars */
+
 class DB {
   constructor() {
     this.pool = null;
@@ -324,10 +325,20 @@ class DB {
         for (const statement of dbModel.tableCreateStatements) {
           await connection.query(statement);
         }
-
+        /* 아래는 수정전
         if (!dbExists) {
           const defaultAdmin = { name: '常用名字', email: 'a@jwt.com', password: 'admin', roles: [{ role: Role.Admin }] };
           await this.addUser(defaultAdmin);
+        }
+        */
+        if (!dbExists) {
+          const defaultAdmin = {
+            name: "常用名字",
+            email: "a@jwt.com",
+            password: "admin",
+            roles: [{ role: Role.Admin }],
+          };
+          this.addUser(defaultAdmin);
         }
       } finally {
         await connection.end();
