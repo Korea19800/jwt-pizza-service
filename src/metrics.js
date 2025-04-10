@@ -367,7 +367,7 @@ function getAuthenticationMetrics() {
 }
 
 // 4. Periodic Reporting Send metrics periodically
-function sendMetricsPeriodically(period = 20000) {
+function sendMetricsPeriodically(period = 30000) {
   return setInterval(() => {
     try {
       const builder = new MetricBuilder();
@@ -390,7 +390,7 @@ function sendMetricsPeriodically(period = 20000) {
 }
 
 // Initialize metrics collection
-sendMetricsPeriodically(10000);
+sendMetricsPeriodically(30000);
 
 module.exports = { 
   track, 
